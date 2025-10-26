@@ -162,9 +162,9 @@
     (let ((market-id (var-get next-market-id)))
         (begin
             (asserts! (var-get contract-initialized) err-unauthorized)
-            (asserts! (> resolution-time block-height) err-invalid-params)
+            (asserts! (> resolution-time stacks-block-height) err-invalid-params)
             (asserts! (> resolution-time closing-time) err-invalid-params)
-            (asserts! (> closing-time block-height) err-invalid-params)
+            (asserts! (> closing-time stacks-block-height) err-invalid-params)
             (asserts! (<= fee-percentage u1000) err-invalid-params) ;; Max 10%
             (asserts! (is-authorized-oracle oracle) err-unauthorized)
             (asserts! (> (len outcomes) u1) err-invalid-params)
@@ -251,7 +251,7 @@
     (let ((market (unwrap! (map-get? markets market-id) err-not-found)))
         (begin
             (asserts! (is-eq (get status market) "active") err-market-closed)
-            (asserts! (< block-height (get closing-time market)) err-market-closed)
+            (asserts! (< stacks-block-height (get closing-time market)) err-market-closed)
             (asserts! (>= amount (get min-trade-amount market)) err-invalid-params)
             (asserts! (>= (stx-get-balance tx-sender) amount) err-insufficient-funds)
             (asserts! (< outcome-id (len (get outcomes market))) err-invalid-params)
@@ -287,7 +287,7 @@
           (user-position (unwrap! (map-get? user-positions { market-id: market-id, user: tx-sender, outcome: outcome-id }) err-not-found)))
         (begin
             (asserts! (is-eq (get status market) "active") err-market-closed)
-            (asserts! (< block-height (get closing-time market)) err-market-closed)
+            (asserts! (< stacks-block-height (get closing-time market)) err-market-closed)
             (asserts! (> shares u0) err-invalid-params)
             (asserts! (>= (get shares user-position) shares) err-insufficient-funds)
             
@@ -365,15 +365,15 @@
         (begin
             (asserts! (is-eq (get oracle market) tx-sender) err-unauthorized)
             (asserts! (is-eq (get status market) "active") err-market-already-resolved)
-            (asserts! (>= block-height (get closing-time market)) err-invalid-params)
+            (asserts! (>= stacks-block-height (get closing-time market)) err-invalid-params)
             (asserts! (< outcome-id (len (get outcomes market))) err-invalid-params)
             
             ;; Set dispute deadline
-            (let ((dispute-deadline (+ block-height (var-get default-dispute-period-length))))
+            (let ((dispute-deadline (+ stacks-block-height (var-get default-dispute-period-length))))
                 (map-set markets market-id (merge market {
                     status: "resolved",
                     resolved-outcome: (some outcome-id),
-                    resolution-block: (some block-height),
+                    resolution-block: (some stacks-block-height),
                     dispute-deadline: (some dispute-deadline)
                 })))
             
@@ -384,7 +384,7 @@
     (let ((market (unwrap! (map-get? markets market-id) err-not-found)))
         (begin
             (asserts! (is-eq (get status market) "resolved") err-market-not-resolved)
-            (asserts! (< block-height (unwrap! (get dispute-deadline market) err-dispute-period-expired)) err-dispute-period-expired)
+            (asserts! (< stacks-block-height (unwrap! (get dispute-deadline market) err-dispute-period-expired)) err-dispute-period-expired)
             (asserts! (>= stake-amount (var-get min-dispute-stake)) err-insufficient-funds)
             (asserts! (>= (stx-get-balance tx-sender) stake-amount) err-insufficient-funds)
             (asserts! (< proposed-outcome (len (get outcomes market))) err-invalid-params)
@@ -409,7 +409,7 @@
     (let ((market (unwrap! (map-get? markets market-id) err-not-found)))
         (begin
             (asserts! (or (is-eq (get status market) "resolved") (is-eq (get status market) "disputed")) err-invalid-params)
-            (asserts! (>= block-height (unwrap! (get dispute-deadline market) err-dispute-period-expired)) err-dispute-period-active)
+            (asserts! (>= stacks-block-height (unwrap! (get dispute-deadline market) err-dispute-period-expired)) err-dispute-period-active)
             
             ;; Update market status to finalized
             (map-set markets market-id (merge market { status: "finalized" }))
